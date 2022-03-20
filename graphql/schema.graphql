@@ -1,0 +1,101 @@
+
+# "A date string with format `Y-M-D`"
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+# "A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+
+    # Relationships
+    vehicles: [Vehicle!]! @hasMany
+}
+
+type Vehicle {
+    id: ID!
+    reg_no: String!
+    manufacture_year: Int!
+    type: String!
+    tonnage: Float!
+    created_at: DateTime!
+    updated_at: DateTime!
+
+    # Relationships
+    user: User! @belongsTo
+}
+
+# User related queries
+type Query {
+    # usersAll: [User!]! @all
+    # user(id: ID! @eq): User @find
+    # users: [User!]! @paginate
+    me: User! @auth
+    vehicles: [Vehicle!]!
+    @all
+    @whereAuth(relation: "user")
+}
+
+# User inputs
+input LoginInput {
+    email: String! @trim @rules(apply: ["required", "string"])
+    password: String! @rules(apply: ["required", "string"]) @hash
+}
+
+input RegisterInput {
+    name: String! @trim @rules(apply: ["required", "string"])
+    email: String! @trim @rules(apply: ["required", "string", "unique:users,email"])
+    password: String! @rules(apply: ["required", "string", "min:3"]) @hash
+}
+
+# Vehicle inputs
+input VehicleInput {
+    reg_no: String! @trim @rules(apply: ["required", "string", "min:1", "unique:vehicles,reg_no"])
+    manufacture_year: Int! @rules(apply: ["required", "integer", "date_format:Y"])
+    type: String! @trim @rules(apply: ["required", "string", "min:1"])
+    tonnage: Float! @rules(apply: ["required", "numeric", "min:0"])
+}
+
+input UpdateVehicleInput {
+    type: String! @trim @rules(apply: ["required", "string", "min:1"])
+    tonnage: Float! @rules(apply: ["required", "numeric", "min:0"])
+}
+
+# User mutations
+type Mutation {
+    register(
+        input: RegisterInput @spread
+    ): User! @create
+
+    # Auth mutations
+    ## "Log in to a new session and get the user."
+    login(email: String!, password: String!): User!
+
+    ## "Log out from the current session, showing the user one last time."
+    logout: User @guard
+
+    # Vehicle mutations
+    registerVehicle(
+        input: VehicleInput @spread
+    ): Vehicle!
+    @can(ability: "create", model: "App\\Models\\Vehicle")
+    @create
+    @inject(context: "user.id", name: "user_id")
+
+    updateVehicle(
+        id: ID!
+        input: UpdateVehicleInput @spread
+    ): Vehicle!
+    @can(ability: "update", model: "App\\Models\\Vehicle", find: id)
+    @update
+    @inject(context: "user.id", name: "user_id")
+
+    deleteVehicle(
+        id: ID!
+    ): Vehicle!
+    @can(delete: "delete", model: "App\\Models\\Vehicle", find: id)
+    @delete
+}
