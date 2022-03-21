@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -19,21 +20,24 @@ abstract class UserTest extends TestCase
        $this->bootRefreshesSchemaCache();
     }
 
-    public function testCreateUser()
+    public function testCreateUser(): void
 {
-    $response = $this->graphQL(/** @lang GraphQL */ '
-        mutation register{
-            register(
-              input: { name: "sammy", email: "sam@test.com", password: "password" }
-            ) {
-              id
-              name
-            }
-          }
-    ');
-
-    return $response;
-
+    $response = factory(User::class)->create();
+    $this->graphQL(/** @lang GraphQL */ '
+        users {
+            id
+            name
+        }
+    ')->assertJson([
+        'data' => [
+            'users' => [
+                [
+                    'id' => $response->id,
+                    'title' => $response->title,
+                ],
+            ],
+        ],
+    ]);
 
   }
 
@@ -87,19 +91,37 @@ abstract class UserTest extends TestCase
   }
 
   public function testCreateVehicle(){
-      $response =$this->graphQL('
-        registerVehicle(input: {
-            reg_no: "KCS 125"
-            type:"truck"
-            manufacture_year: "2020"
-            tonnage:"5.0"
-        }){
+    $response = factory(Vehicle::class)->create();
+
+    $this->graphQL(/** @lang GraphQL */ '
+        vehicles {
             reg_no
             manufacture_year
         }
-      ');
+    ')->assertJson([
+        'data' => [
+            'vehicles' => [
+                [
+                    'reg_no' => $response->id,
+                    'manufacture_year' => $response->title,
+                ],
+            ],
+        ],
+    ]);
 
-      return $response;
+    //   $response =$this->graphQL('
+    //     registerVehicle(input: {
+    //         reg_no: "KCS 125"
+    //         type:"truck"
+    //         manufacture_year: "2020"
+    //         tonnage:"5.0"
+    //     }){
+    //         reg_no
+    //         manufacture_year
+    //     }
+    //   ');
+
+    //   return $response;
   }
   public function testUpdateVehicle(){
       $response =$this->graphQL('
